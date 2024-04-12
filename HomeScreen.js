@@ -1,13 +1,44 @@
-import React, { useState } from 'react';
-import { Button, View, Text, TextInput, StyleSheet } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons'; // Import MaterialIcons from Expo
+//HomeScreen
+import React, { useState, useEffect } from 'react';
+import { Button, View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const initialState = { link: '', name: '' };
 
 export default function HomeScreen({ navigation }) {
   const [formData, setFormData] = useState(initialState);
   const [savedLinks, setSavedLinks] = useState([]);
-  const [showForm, setShowForm] = useState(false); // State to control form visibility
+  const [showForm, setShowForm] = useState(false);
+
+  const saveData = async (key, value) => {
+    try {
+      await AsyncStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.error('Error saving data to AsyncStorage:', error);
+    }
+  };
+
+  const loadData = async (key) => {
+    try {
+      const value = await AsyncStorage.getItem(key);
+      if (value !== null) {
+        return JSON.parse(value);
+      }
+    } catch (error) {
+      console.error('Error loading data from AsyncStorage:', error);
+    }
+  };
+
+  useEffect(() => {
+    const loadSavedLinks = async () => {
+      const savedLinksData = await loadData('savedLinks');
+      if (savedLinksData) {
+        setSavedLinks(savedLinksData);
+      }
+    };
+    loadSavedLinks();
+  }, []);
 
   const handleInputChange = (name, value) => {
     setFormData({ ...formData, [name]: value });
@@ -16,20 +47,23 @@ export default function HomeScreen({ navigation }) {
   const handleSave = () => {
     const { link, name } = formData;
     if (link && name) {
-      setSavedLinks([...savedLinks, { link, name }]);
+      const newLinks = [...savedLinks, { link, name }];
+      setSavedLinks(newLinks);
+      saveData('savedLinks', newLinks);
       setFormData(initialState);
-      setShowForm(false); // Hide form after saving
+      setShowForm(false);
     }
   };
 
   const handleLinkPress = (link) => {
-    navigation.navigate('Webview', { link }); // Navigate to webview on link press
+    navigation.navigate('Webview', { link });
   };
 
   const handleDelete = (index) => {
     const newLinks = [...savedLinks];
     newLinks.splice(index, 1);
     setSavedLinks(newLinks);
+    saveData('savedLinks', newLinks);
   };
 
   return (
@@ -61,17 +95,19 @@ export default function HomeScreen({ navigation }) {
       )}
       <View style={styles.body}>
         {savedLinks.map((link, index) => (
-          <View key={index} style={styles.card}>
-            <Text style={styles.cardText} onPress={() => handleLinkPress(link.link)}>
-              {link.name}
-            </Text>
+          <TouchableOpacity
+            key={index}
+            style={styles.card}
+            onPress={() => handleLinkPress(link.link)}
+          >
+            <Text style={styles.cardText}>{link.name}</Text>
             <MaterialIcons
               name="delete"
               size={24}
               color="black"
               onPress={() => handleDelete(index)}
             />
-          </View>
+          </TouchableOpacity>
         ))}
       </View>
     </View>
@@ -82,15 +118,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: 'white', // Gray background color
+    backgroundColor: 'white',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
-   
-    paddingLeft:10
+    paddingLeft: 10
   },
   headerText: {
     fontSize: 20,
