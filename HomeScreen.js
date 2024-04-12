@@ -46,6 +46,11 @@ export default function HomeScreen({ navigation }) {
 
   const handleSave = () => {
     const { link, name } = formData;
+    if (!isValidURL(link)) {
+      // Display error message for invalid link
+      alert('Invalid link! Please enter a valid URL.');
+      return;
+    }
     if (link && name) {
       const newLinks = [...savedLinks, { link, name }];
       setSavedLinks(newLinks);
@@ -54,6 +59,15 @@ export default function HomeScreen({ navigation }) {
       setShowForm(false);
     }
   };
+// Function to validate URL
+const isValidURL = (url) => {
+  try {
+    new URL(url);
+    return true;
+  } catch (error) {
+    return false;
+  }
+};  
 
   const handleLinkPress = (link) => {
     navigation.navigate('Webview', { link });
